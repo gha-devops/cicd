@@ -1,0 +1,53 @@
+name: 'Build docker image'
+description: 'Build docker image'
+inputs:
+  access-key:
+    description: 'AWS access key'
+    required: true
+  secret-access-key:
+    description: 'AWS secret access key'
+    required: true
+  region:
+    description: 'AWS region'
+    required: true
+    default: eu-west-1
+  ecr-repository:
+    description: 'Repository name for the docker image on ECR'
+    required: true
+  image-name:
+    description: 'Name of the docker image to be built'
+    required: true
+    default: ${{ github.repository}}
+  image-tag:
+    description: 'Value for image tag'
+    required: true
+    default: ${{ github.sha }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ inputs.access-key}}
+        aws-secret-access-key: ${{ inputs.secret-access-key}}
+        aws-region: ${{ inputs.region }}
+      
+    - name: Login
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry}}
+        ECR_REPOSITORY: ${{ inputs.ecr-repository }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+      shell: bash
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    
+    - name: Logout
+      if: always()
+      shell: bash
+      run: docker logout ${{ steps.login-ecr.outputs.registry }}
