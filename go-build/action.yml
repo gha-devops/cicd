@@ -10,7 +10,9 @@ runs:
         go-version: 1.18
 
     - name: Build
+      shell: bash
       run: go build -v ./...
 
     - name: Test
+      shell: bash
       run: go test -v ./...
